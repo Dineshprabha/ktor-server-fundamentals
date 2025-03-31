@@ -29,4 +29,8 @@ dependencies {
     implementation(libs.ktor.server.content.negotiations)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.resources)
+    implementation(libs.ktor.server.status.pages)
+
+    implementation(libs.mongodb.driver.kotlin.coroutine)
+    implementation(libs.bson.kotlinx)
 }

@@ -1,4 +1,4 @@
-package com.dinesh.plugins
+package com.dinesh.model
 
 import kotlinx.serialization.Serializable
 
