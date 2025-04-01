@@ -30,6 +30,9 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.resources)
     implementation(libs.ktor.server.status.pages)
+    implementation(libs.ktor.server.request.validation)
+    implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.sessions)
 
     implementation(libs.mongodb.driver.kotlin.coroutine)
     implementation(libs.bson.kotlinx)

@@ -2,10 +2,7 @@ package com.dinesh
 
 import com.dinesh.ktor_mongodb.MongoDatabaseFactory
 import com.dinesh.model.UsersDataSource
-import com.dinesh.plugins.configureResources
-import com.dinesh.plugins.configureRouting
-import com.dinesh.plugins.configureSerialization
-import com.dinesh.plugins.configureStatusPages
+import com.dinesh.plugins.*
 import io.ktor.server.application.*
 
 fun main(args: Array<String>) {
@@ -18,7 +15,14 @@ fun Application.module() {
 
 
     configureResources()
+//    configureBasicAuthentication()
+//    configureDigestAuthentication()
+//    configureBearerAuthentication()
+    configureSessions()
+    configureSessionAuthentication()
     configureRouting(usersDataSource)
     configureSerialization()
     configureStatusPages()
+    configureRequestValidation()
+
 }

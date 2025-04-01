@@ -6,9 +6,12 @@ import com.dinesh.model.UserEntity
 import com.dinesh.model.UsersDataSource
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.sessions.*
 import io.ktor.util.cio.*
 import io.ktor.utils.io.*
 import kotlinx.serialization.Serializable
@@ -18,8 +21,11 @@ import java.io.FileOutputStream
 
 fun Application.configureRouting(usersDataSource: UsersDataSource) {
 
+    val usersDB = mutableMapOf<String, String>()
+
     routing {
 
+        /*-------------------------------------------------- Ktor with mongo database ----------------------------------------------------*/
         get("users") {
             val id = call.queryParameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
             val user = usersDataSource.getUserById(id) ?: return@get call.respond(HttpStatusCode.NotFound)
@@ -74,20 +80,7 @@ fun Application.configureRouting(usersDataSource: UsersDataSource) {
         }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        /*-------------------------------------------------- server fundamentals ----------------------------------------------------*/
 
         post("greet") {
             val name = call.receiveText()
@@ -135,7 +128,7 @@ fun Application.configureRouting(usersDataSource: UsersDataSource) {
         }
 
 
-        //part-4
+        /*-------------------------------------------------- part - 4 ----------------------------------------------------*/
 
         post("checkout") {
             val formData = call.receiveParameters()
@@ -150,5 +143,70 @@ fun Application.configureRouting(usersDataSource: UsersDataSource) {
 //            throw Exception("Database failed to in initialize")
             call.respond(HttpStatusCode.Unauthorized )
         }
+
+
+        /*-------------------------------------------------- Part - 6 Request Validation ----------------------------------------------------*/
+
+
+        post("message") {
+            val message = call.receive<String>()
+            call.respondText(message)
+        }
+
+
+        staticResources("static", "static") {
+        }
+
+
+        /*-------------------------------------------------- Part - 10 Basic Authentication ----------------------------------------------------*/
+
+
+        authenticate ("session-auth") {
+            get("") {
+                val username = call.principal<UserSession>()?.username
+                call.respondText("Hello, $username")
+            }
+        }
+
+
+        post("signup") {
+            val requestData = call.receive<AuthRequest>()
+            if(usersDB.containsKey(requestData.username)){
+                call.respondText("User already exists")
+            }else {
+                usersDB[requestData.username] = requestData.password
+                call.sessions.set(UserSession(requestData.username))
+                call.respondText("User signup success")
+            }
+        }
+
+        post("login") {
+            val requestData = call.receive<AuthRequest>()
+            val storedPassword = usersDB[requestData.username]
+                ?: return@post call.respondText("User doesn't exist")
+
+            if (storedPassword == requestData.password) {
+                call.sessions.set(UserSession(requestData.username))
+                call.respondText("Login Success")
+            }else{
+                call.respondText("Invalid credentials")
+            }
+
+        }
+
+        post("logout") {
+            call.sessions.clear<UserSession>()
+            call.respondText("Logout Success")
+        }
+
+
     }
+
+
 }
+
+@Serializable
+data class AuthRequest(
+    val username: String,
+    val password: String
+)
