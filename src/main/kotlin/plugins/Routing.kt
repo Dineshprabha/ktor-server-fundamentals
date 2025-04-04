@@ -7,21 +7,30 @@ import com.dinesh.model.UsersDataSource
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
+import io.ktor.server.sse.*
+import io.ktor.server.websocket.*
+import io.ktor.sse.*
 import io.ktor.util.cio.*
 import io.ktor.utils.io.*
+import io.ktor.websocket.*
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.ConcurrentHashMap
 
-fun Application.configureRouting(usersDataSource: UsersDataSource) {
+fun Application.configureRouting(usersDataSource: UsersDataSource, config: JWTConfig) {
 
     val usersDB = mutableMapOf<String, String>()
+    val onlineUsers = ConcurrentHashMap<String, WebSocketSession>()
 
     routing {
 
@@ -160,11 +169,20 @@ fun Application.configureRouting(usersDataSource: UsersDataSource) {
 
         /*-------------------------------------------------- Part - 10 Basic Authentication ----------------------------------------------------*/
 
+//
+//        authenticate ("session-auth") {
+//            get("") {
+//                val username = call.principal<UserSession>()?.username
+//                call.respondText("Hello, $username")
+//            }
+//        }
 
-        authenticate ("session-auth") {
+        authenticate ("jwt-auth") {
             get("") {
-                val username = call.principal<UserSession>()?.username
-                call.respondText("Hello, $username")
+                val principal = call.principal<JWTPrincipal>()
+                val username = principal?.payload?.getClaim("username")?.asString()
+                val expiresAt = principal?.expiresAt?.time?.minus(System.currentTimeMillis())
+                call.respondText("Hello, $username ! the token expires after $expiresAt ms.")
             }
         }
 
@@ -175,8 +193,15 @@ fun Application.configureRouting(usersDataSource: UsersDataSource) {
                 call.respondText("User already exists")
             }else {
                 usersDB[requestData.username] = requestData.password
-                call.sessions.set(UserSession(requestData.username))
-                call.respondText("User signup success")
+
+                //for session authentication
+//                call.sessions.set(UserSession(requestData.username))
+//                call.respondText("User signup success")
+
+                //for jwt authentication
+                val token = generateToken(config = config, username = requestData.username)
+                call.respond(mapOf("token" to token))
+
             }
         }
 
@@ -186,8 +211,17 @@ fun Application.configureRouting(usersDataSource: UsersDataSource) {
                 ?: return@post call.respondText("User doesn't exist")
 
             if (storedPassword == requestData.password) {
-                call.sessions.set(UserSession(requestData.username))
-                call.respondText("Login Success")
+
+                //for session authentication
+//                call.sessions.set(UserSession(requestData.username))
+//                call.respondText("Login Success")
+
+
+                //for jwt authentication
+
+                val token = generateToken(config = config, username = requestData.username)
+                call.respond(mapOf("token" to token))
+
             }else{
                 call.respondText("Invalid credentials")
             }
@@ -199,11 +233,57 @@ fun Application.configureRouting(usersDataSource: UsersDataSource) {
             call.respondText("Logout Success")
         }
 
+        /*---------------------------------SSE-----------------*/
 
+
+        sse ("events"){
+            repeat(8) {
+                send(ServerSentEvent("Event: ${ it + 1}"))
+                delay(1000L)
+            }
+        }
+
+
+        webSocket ("chat") {
+            val username = call.request.queryParameters["username"] ?: run {
+                this.close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "username is required for establishing connection"))
+                return@webSocket
+            }
+
+            onlineUsers[username] = this
+            send("You are connected!!")
+            try {
+                incoming.consumeEach { frame ->
+                    if (frame is Frame.Text) {
+                        val message = Json.decodeFromString<Message>(frame.readText())
+                        if (message.to.isNullOrBlank()){
+                            onlineUsers.values.forEach {
+                                it.send("$username : ${message.text}")
+                            }
+                        }else{
+                            val session = onlineUsers[message.to]
+                            session?.send("$username : ${message.text}")
+                        }
+
+                    }
+                }
+
+            }finally {
+                onlineUsers.remove(username)
+                this.close( )
+
+            }
+        }
     }
 
 
 }
+
+@Serializable
+data class Message(
+    val text: String,
+    val to: String ? = null
+)
 
 @Serializable
 data class AuthRequest(

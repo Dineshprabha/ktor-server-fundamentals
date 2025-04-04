@@ -32,8 +32,12 @@ dependencies {
     implementation(libs.ktor.server.status.pages)
     implementation(libs.ktor.server.request.validation)
     implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.auth.jwt)
     implementation(libs.ktor.server.sessions)
+    implementation(libs.ktor.server.sse)
+    implementation(libs.ktor.server.websockets)
 
     implementation(libs.mongodb.driver.kotlin.coroutine)
     implementation(libs.bson.kotlinx)
+
 }

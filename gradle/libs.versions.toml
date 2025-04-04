@@ -22,7 +22,10 @@ ktor-server-request-validation = { module = "io.ktor:ktor-server-request-validat
 
 
 ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor-version"}
+ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor-version"}
 ktor-server-sessions = { module = "io.ktor:ktor-server-sessions", version.ref = "ktor-version"}
+ktor-server-sse = { module = "io.ktor:ktor-server-sse", version.ref = "ktor-version"}
+ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor-version"}
 
 
 mongodb-driver-kotlin-coroutine = { module =  "org.mongodb:mongodb-driver-kotlin-coroutine", version.ref = "mongodb-driver-version"}
